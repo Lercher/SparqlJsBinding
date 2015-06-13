@@ -60,3 +60,108 @@ the same folder.
 
 This [library](https://github.com/chjj/marked) is used by the sample application to transform 
 markdown source code to proper html.
+
+
+
+## Angular services
+
+Some brief description of the provided Angular services.
+
+### sparql
+
+Main service to construct SPARQL query functions.
+
+### sparql$http
+
+Create promises to
+
+* Query a b* store
+* Store a flat JS object to the RDF store
+* retrieve a flat JS object from the RDF store
+
+### brightstardb
+
+Just a configuration point to build URLs to access BrightstarDB's
+Query and Update endpoints for a particular store.
+
+
+
+## Sample Code Fragments
+
+Now some code fragments showing the use of the library
+
+
+### Setting up the BrightstarDB Server and Store
+
+```
+  brightstardb.config.server = "bs.somedomain.com";
+  brightstardb.config.store = "Article";
+```
+
+### Defining some prefixes
+
+```
+  var idPrefix = sparql.prefix("o", "http://www.brightstardb.com/example/article/");
+  var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", ["title", "abstr", "tags"])
+  var a = sparql.a;
+```
+
+## Query
+
+### State a query with an unbound TAG
+
+```
+  var unboundTag = sparql.unbound("TAG");
+  var articlelist = sparql.vars("res", "title", "abstr");
+  var articlelistQY = sparql(propertyPrefix).select(sparql.distinct, articlelist).where(
+    [articlelist.res, a, idPrefix._asResource],
+    [articlelist.res, propertyPrefix.title, articlelist.title],
+    [articlelist.res, propertyPrefix.abstr, articlelist.abstr],
+    [articlelist.res, propertyPrefix.tags, unboundTag]
+  ).orderBy(articlelist.res.desc);
+```
+
+
+### Bind TAG to $scope.tagfilter and load the results as a list
+
+```
+      sparql$http(articlelistQY({TAG: $scope.tagfilter})).then(
+        function(data){ $scope.L = data; },
+        function(reason){ $scope.L = null; stderr(reason);});
+```
+
+
+## Store
+
+### Prepare a store with a given property schema and a type for the object
+
+```
+  var update = sparql.update(propertyPrefix, idPrefix._asResource);
+```
+
+### Store a flat object $scope.A under the ID $scope.A.$ID
+
+```
+    sparql$http(update($scope.A.$ID, $scope.A)).then(
+      function(rdf) { /* OK */ },
+      function(reason) { stderr(reason); }
+```
+
+
+## Retrieve
+
+### Prepare a retrieve with a given property schema and a type for the object
+
+```
+var retrieve = sparql.retrieve(propertyPrefix, idPrefix._asResource);
+```
+
+### Get a promise, res is the ID of the article as string
+
+```
+    var articleResource = sparql.resource(res);
+    sparql$http(retrieve(articleResource)).then(
+      function(art) { $scope.A = art; },
+      function (reason) { $scope.A = null; stderr(reason); }
+    );
+```
