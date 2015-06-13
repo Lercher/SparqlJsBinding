@@ -36,7 +36,7 @@
         <script>
 angular.module('sparqlapp', ['ui.bootstrap', 'ngSanitize', 'rdf']);
 angular.module('sparqlapp').controller('sparqlappC', function ($scope, $http, $timeout, sparql$http, sparql, brightstardb) {
-  //brightstardb.config.server = "lerchernt2.singhammer.de";
+  //brightstardb.config.server = "bs.somedomain.com";
   brightstardb.config.store = "Article";
   var idPrefix = sparql.prefix("o", "http://www.brightstardb.com/example/article/");
   var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", ["title", "abstr", "tags"])
