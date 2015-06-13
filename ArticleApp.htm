@@ -1,0 +1,275 @@
+﻿<!doctype html>
+<html ng-app="sparqlapp">
+    <head>
+        <!-- https://raw.githubusercontent.com/chjj/marked/master/marked.min.js -->
+        <script src="./marked.min.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular.js"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular-sanitize.js"></script>
+        <script src="http://angular-ui.github.io/bootstrap/ui-bootstrap-tpls-0.13.0.js"></script>
+        <script src="./rdf.angular.js"></script>
+        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet"/>
+
+        <style type="text/css">
+            #x-sparql {display: none; } /* optional, use #x-sparql or #sparql */
+            #sparql pre {margin: 2ex; font-size: 80%; }
+            body { opacity: 0.9; }
+            td {padding-right: 0.5em; padding-bottom: 0.5ex;}
+            header, footer { margin: 0px 0px 0px 0px; padding: 2em 1em 2em 1em; background-color: #ccc; width: 100%;}
+            header {margin-bottom: 1em; font-size: 120%; font-weight: bolder; padding-right: 25em; }
+            footer {margin-top: 1em; }
+            section { margin: 0px 3px 0px 3px; }
+            nav div { display: inline-block; }
+            #abstract {font-style: italic; margin-top: 2ex; margin-bottom: 3ex; white-space: pre-wrap; font-size: small; }
+            p.abstract {white-space: pre-wrap; }
+            #content {min-height: 60ex;}
+            #mode {position: absolute; right: 20px; top: 30px;}
+            textarea.full { width: 100%; height: 40ex; font-family: monospace;  }
+            textarea.half { width: 100%; height: 10ex; }
+            input.half { width: 100%; }
+            span.tag { color: white; background-color: #428bca; padding: 5px; display: inline-block; margin: 5px 5px 5px 0px; border-radius: 4px; }
+            span.p { cursor: pointer; }
+            span.selected { background-color: #3276b1; }
+            span.del:after { content: "x"; color: black; background-color: white; padding: 0px 4px 0px 4px; border-radius: 4px; margin-left: 6px; }
+            div.teaser { display: inline-block; vertical-align:top; width: 28em; min-height: 15ex; margin-right: 2em; }
+        </style>
+
+        <script>
+angular.module('sparqlapp', ['ui.bootstrap', 'ngSanitize', 'rdf']);
+angular.module('sparqlapp').controller('sparqlappC', function ($scope, $http, $timeout, sparql$http, sparql, brightstardb) {
+  //brightstardb.config.server = "lerchernt2.singhammer.de";
+  brightstardb.config.store = "Article";
+  var idPrefix = sparql.prefix("o", "http://www.brightstardb.com/example/article/");
+  var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", ["title", "abstr", "tags"])
+  var a = sparql.a;
+
+  $scope.filtertag = function(tag, refresh) {
+    $scope.selectedtag = tag;
+    tag = tag || sparql.vars("any").any;
+    tag = sparql.literal(tag);
+    $scope.tagfilter = tag;
+    if (refresh) {
+      loadArticlelist();
+    }
+  }
+
+  function stderr(reason) {
+    $scope.msg = reason;
+    $scope.showtranscript = true;
+  }
+
+  // Load Article List
+  var unboundTag = sparql.unbound("TAG");
+  var articlelist = sparql.vars("res", "title", "abstr");
+  var articlelistQY = sparql(propertyPrefix).select(sparql.distinct, articlelist).where(
+    [articlelist.res, a, idPrefix._asResource],
+    [articlelist.res, propertyPrefix.title, articlelist.title],
+    [articlelist.res, propertyPrefix.abstr, articlelist.abstr],
+    [articlelist.res, propertyPrefix.tags, unboundTag]
+  ).orderBy(articlelist.res.desc);
+  function loadArticlelist() {
+      var qy = articlelistQY({TAG: $scope.tagfilter});
+      sparql$http(qy).then(
+        function(data){
+          $scope.L = data;
+          $scope.msg = qy.query; },
+        function(reason){
+          $scope.L = null;
+          stderr(reason);
+        })
+  }
+
+  // Load All Tags
+  var alltags = sparql.vars("tag", "res");
+  var alltagsQY = sparql(propertyPrefix).select(sparql.distinct, alltags.tag).where(
+    [alltags.res, a, idPrefix._asResource],
+    [alltags.res, propertyPrefix.tags, alltags.tag]
+  ).orderBy(alltags.tag)();
+  function loadTags() {
+      sparql$http(alltagsQY).then(
+        function(data) {
+          $scope.T = data;
+          $scope.msg = alltagsQY.query; },
+        function(reason) {
+          $scope.T = null;
+          stderr(reason); },
+        function(status) {
+          if (status === 404) alert("Error 404: The b* services were not found. Probably this is your first time accessing this app.\nTry setting up a b* store named " + brightstardb.config.store + "\nThere is a link for UI access.");
+          if (status === 0) alert("Error 0: Most likely the local 'BrightstarDB Service' is not running. Try starting it and hit F5 afterwards.");
+        })
+  }
+
+  // Load an Article
+  var retrieve = sparql.retrieve(propertyPrefix, idPrefix._asResource);
+  $scope.article = function(res) {
+    var articleResource = sparql.resource(res);
+    var q = retrieve(articleResource);
+    sparql$http(q).then(
+      function(art) {
+        $scope.A = art;
+        $scope.msg = q.query.query;
+        $scope.mode = "Content"; },
+      function (reason) {
+        $scope.A = null;
+        stderr(reason); }
+    );
+  }
+
+  // Save an Article
+  var update = sparql.update(propertyPrefix, idPrefix._asResource);
+  $scope.save = function() {
+    if ($scope.A.tags.length===0) { $scope.A.tags.push("(none)") }
+    sparql$http(update($scope.A.$ID, $scope.A)).then(
+      function(rdf) {
+        $scope.msg = rdf;
+        $scope.mode = "Content"; },
+      function(reason) {
+        stderr(reason);
+        alert("Save failed: " + reason); }
+    )
+  }
+  $scope.hasSave = function() {
+    return ($scope.mode==="Edit") || ($scope.mode==="Meta");
+  }
+
+  function newID(p) {
+    return p(""+Number(new Date()))._asResource;
+  }
+  function newArticle() {
+    return { $ID: newID(idPrefix), md: "", title: "", abstr: "", tags: []};
+  }
+  $scope.$watch("mode", function(mode) {
+    switch (mode) {
+      case "List":
+        $scope.A = null;
+        loadTags();
+        loadArticlelist();
+        break;
+      case "Content":
+      case "Edit":
+      case "Meta":
+        $scope.L = null;
+        $scope.T = null;
+        if (!$scope.A) {
+          $scope.A = newArticle();
+        }
+        break;
+    }
+  });
+
+    // init $scope
+  $scope.msg = "";
+  $scope.A = null;
+  $scope.L = null;
+  $scope.T = null;
+  $scope.filtertag(null, false);
+  $scope.mode = "List";
+  $timeout(function() {
+    document.querySelector('#s').focus();
+  }, 100);
+});
+
+angular.module('sparqlapp').filter("markdown", function($sce, $sanitize) {
+  return function(md) {
+    var html = marked(md || "");
+    var san = $sanitize(html);
+    return $sce.trustAsHtml(san);
+  }
+});
+        </script>
+    </head>
+
+
+    <body ng-controller="sparqlappC">
+        <header ng-show="L">
+          Search Articles: <input type="text" ng-model="search" id="s">
+        </header>
+
+        <section id="tags" ng-show="T">
+          <span class="tag p" ng-class="{selected: selectedtag===null}"
+                ng-click="filtertag(null, true)">(ANY)</span><span
+                class="tag p" ng-class="{selected: selectedtag===t.tag.value}" ng-click="filtertag(t.tag.value, true)" ng-repeat="t in T.results.bindings" ng-bind="t.tag.value"/>
+        </section>
+
+        <section id="articlelist" ng-show="L">
+          <div ng-repeat="A in L.results.bindings | filter:search" class="teaser">
+            <h3><a href="#" ng-click="article(A.res.value)">{{A.title.value||"[No Title]"}}</a></h3>
+            <p class="abstract">{{A.abstr.value}}</a></p>
+          </div>
+        </section>
+
+        <header ng-show="A">
+          {{A.title||"[No Title]"}}
+        </header>
+
+        <nav id="mode">
+          <div class="btn-group" >
+            <label class="btn btn-primary" ng-model="mode" btn-radio="'List'">List</label>
+            <label class="btn btn-primary" ng-model="mode" btn-radio="'Content'">Content</label>
+            <label class="btn btn-primary" ng-model="mode" btn-radio="'Meta'">Metadata</label>
+            <label class="btn btn-primary" ng-model="mode" btn-radio="'Edit'">Edit Content</label>
+          </div>
+          <div>
+            <button class="btn btn-primary" ng-click="save()" ng-show="hasSave()">Save</button>
+          </div>
+        </nav>
+
+        <section id="abstract" ng-show="mode==='Content'">{{A.abstr}}</section>
+
+        <section id="content" ng-show="A">
+          <div ng-bind-html="A.md|markdown" ng-show="mode==='Content'"></div>
+
+          <div ng-show="mode==='Edit'">
+            <h3>Edit Markdown Content</h3>
+            <textarea class="full" ng-model="A.md"></textarea>
+            <p><a href="http://markdowntutorial.com/">Markdown tutorial</a></p>
+          </div>
+
+          <div ng-show="mode==='Meta'">
+            <h3>Metadata</h3>
+            <p>
+              Title
+              <br>
+              <input class="half" ng-model="A.title"/>
+            </p>
+            <p>
+              Abstract
+              <br>
+              <textarea class="half" ng-model="A.abstr"></textarea>
+            </p>
+            <p>
+              <form ng-submit="A.tags.push(tag); tag='';">
+                Tags
+                <br>
+                <span class="tag p del" ng-repeat="t in A.tags"
+                      ng-bind="t"
+                      ng-click="A.tags.splice($index, 1)"></span>
+                <input ng-model="tag" title="a a tagname and press enter" placeholder="tagname"/>
+              </form>
+            </p>
+          </div>
+        </section>
+
+        <section id="tags" ng-show="mode==='Content'">
+          Tags: <span class="tag" ng-repeat="t in A.tags" ng-bind="t"/>
+        </section>
+
+        <footer>
+          Built for <a href="http://en.wikipedia.org/wiki/HTML5">HTML5</a>.
+          Uses
+          <a href="http://www.angularjs.org">AngularJS</a>,
+          <a href="http://getbootstrap.com/">Bootstrap</a>,
+          <a href="http://angular-ui.github.io/bootstrap/">UI Bootstrap</a>
+          and <a href="https://github.com/chjj/marked">marked</a> for markdown parsing.
+          And, of course, <a href="http://www.brightstardb.com">Brightstar DB</a> (b*)
+          for <a href="http://en.wikipedia.org/wiki/Resource_Description_Framework">RDF</a>
+          and <a href="http://en.wikipedia.org/wiki/SPARQL">SPARQL</a>
+          (<a href="http://www.w3.org/TR/sparql11-overview/">v1.1 language spec</a>)
+          services. Access to your <a href="http://localhost:8090/brightstar">local b* UI</a>.
+          Show SPARCL transcript below <input type="checkbox" ng-model="showtranscript" /> .
+        </footer>
+
+        <section id="sparql" ng-show="showtranscript">
+          <pre ng-show="msg">{{msg}}</pre>
+        </section>
+    </body>
+</html>
