@@ -5,30 +5,31 @@ in a more JavaScript'ish way. It's currently integrated with the RESTful
 Webservice of [BrightstarDB](http://www.brightstardb.com/). Has functions to store and retreive simple 
 JavaScript objects in the RDF database.
 
-*Note*
-
-The language binding is in no ways complete. It covers only
+*Note:* The language binding is in no ways complete. It covers only
 basic triple based operations like:
 
 * select, where, order by
 * select distinct
-* where optional
-* prefixes
+* where with optional triples
+* prefixes and resources
 * strings and numbers as literals
 
 To store and retrieve JS objects:
 
-* only flat property/literal-value like objects
-* arrays are stored and retrieved as sets (no order, no duplicates!)
+* only flat property/literal-or-resource-value like JS objects
+* with a rdf:type
+* array properties are stored and retrieved as sets (no order, no duplicates!)
 
-Remember: RDF is all about resources and their respective links, so you have to make them
-explicit. If you need to store complex object graphs without thinking, consider using JSON.stringify.
+*Please remember:* RDF is all about resources and their respective links, so you have to make them
+explicit with store and retrieve. If you need to store complex object graphs *without* thinking, 
+consider using JSON.stringify.
 
+## Files in the repository
 
 ### The JS Language Binding Library - rdf.angular.js
 
 Documentation is included only as comments in the file, 
-but see also the sample application for an example application.
+but see also the sample application for an example.
 
 
 ### Sample Application - ArticleApp.htm
@@ -65,7 +66,11 @@ markdown source code to proper html.
 
 ## Angular services
 
-A brief description of the provided Angular services.
+A brief description of the three provided Angular services:
+
+* sparql
+* sparql$http
+* brightstardb
 
 ### sparql
 
@@ -88,7 +93,7 @@ Query and Update endpoints for a particular store.
 
 ## Sample Code Fragments
 
-Now some code fragments showing the use of the library
+Code fragments showing the use of the library
 
 
 ### Setting up the BrightstarDB Server and Store
@@ -101,34 +106,44 @@ brightstardb.config.store = "Article";
 ### Defining some prefixes
 
 ```javascript
+// a prefix for Object IDs
 var idPrefix = sparql.prefix("o", "http://www.brightstardb.com/example/article/");
-var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", ["title", "abstr", "tags"])
-var a = sparql.a;
+
+// a prefix for their properties
+var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", 
+   ["title", "abstr", "tags"])
+
+var a = sparql.a; // standard abbreviation for rdf:type
 ```
 
 ## Query
 
-State triples and retrieve a promise to an array of the results.
+State prefixes, variables and triples to form a query function. 
+Retrieve a promise to an array of the results.
 
 
-### State a query with an unbound TAG
+### State a query with an unbound named "TAG"
 
-Unbounds can and must be provided later when you post the query. 
-The query function (herer: articlelistQY) can be stored for multiple uses.
+Unbounds can and must be provided later when you post the query to the REST service. 
+The query function (here: articlelistQY) can be stored for later reuse.
+Triples in the .where() function are stated as arrays with three elements.
+Optional triples are enclosed with the sparql.optional() function (not shown here).
 
 ```javascript
 var unboundTag = sparql.unbound("TAG");
-var articlelist = sparql.vars("res", "title", "abstr");
+var articlelist = sparql.vars("res", "title", "abstr"); // define the variables
 var articlelistQY = sparql(propertyPrefix).select(sparql.distinct, articlelist).where(
-	[articlelist.res, a, idPrefix._asResource],
-	[articlelist.res, propertyPrefix.title, articlelist.title],
-	[articlelist.res, propertyPrefix.abstr, articlelist.abstr],
-	[articlelist.res, propertyPrefix.tags, unboundTag]
-).orderBy(articlelist.res.desc);
+	[articlelist.res, a, idPrefix._asResource], // type triple
+	[articlelist.res, propertyPrefix.title, articlelist.title], // standard s p o triple
+	[articlelist.res, propertyPrefix.abstr, articlelist.abstr], // standard s p o triple
+	[articlelist.res, propertyPrefix.tags, unboundTag] // the o position is bound later
+).orderBy(articlelist.res.desc); // order by res descending ;-)
 ```
 
 
-### Bind TAG to $scope.tagfilter and load the results as a list
+### Bind TAG to $scope.tagfilter and load the results to the list $scope.L
+
+$scope.tagfilter is either a sparql variable or a sparql.literal() here.
 
 ```javascript
 sparql$http(articlelistQY({TAG: $scope.tagfilter})).then(
@@ -145,7 +160,9 @@ with the propertyPrefix to form proper predicate resources.
 
 ### Prepare a store with a given property schema and a type for the object
 
-The update function can be reused.
+You need an RDF prefix for the properties to be stored
+and an RDF type resource for the object, which is the second parameter here.
+The resulting update function can be reused.
 
 ```javascript
 var update = sparql.update(propertyPrefix, idPrefix._asResource);
@@ -153,7 +170,7 @@ var update = sparql.update(propertyPrefix, idPrefix._asResource);
 
 ### Store a flat object 
 
-The Object to store is $scope.A and it is stored under 
+The object to store is $scope.A and it is stored under 
 the ID $scope.A.$ID witch is a sparql.resource() (not shown here).
 
 ```javascript
@@ -165,20 +182,20 @@ sparql$http(update($scope.A.$ID, $scope.A)).then(
 
 ## Retrieve
 
-The reversed operation of Store
+The reverse operation of Store
 
 
 ### Prepare a retrieve with a given property schema and a type for the object
 
-The retrieve function can be reused.
+The retrieve function can be reused. Prefix and type parameters as in Store.
 
 ```javascript
 var retrieve = sparql.retrieve(propertyPrefix, idPrefix._asResource);
 ```
 
-### Get a promise to the object
+### Get a promise to the loaded JS object
 
-res is the ID of the article as string so it has to be converted to an RDF resource first.
+res is the ID of the article as a string so it has to be converted to an RDF resource first.
 
 ```javascript
 var articleResource = sparql.resource(res);
