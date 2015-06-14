@@ -24,6 +24,15 @@ To store and retrieve JS objects:
 explicit with store and retrieve. If you need to store complex object graphs *without* thinking, 
 consider using JSON.stringify.
 
+
+## Licensing
+
+My work, i.e. the language binding and the sample app are provided under the MIT license. 
+They are free to use for both commercial and non-commercial purposes. The Markdown parser 
+and the BrightstarDB Server have their own licensing. At the time of creation of this repository, 
+i.e. mid 2015 they were both open source.
+
+
 ## Files in the repository
 
 ### The JS Language Binding Library - rdf.angular.js
