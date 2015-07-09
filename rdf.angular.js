@@ -457,7 +457,7 @@ angular.module("rdf", [])
     }
     var r = function()
     {
-        return config.protocol+"://"+config.server+":"+config.port+"/blackhole/Query/" + config.store +config.resultAs + "/";
+        return config.protocol+"://"+config.server+":"+config.port+"/blackhole/Query/" + config.store + "." +config.resultAs + "/";
     };
     r.update = function() {
         return config.protocol+"://"+config.server+":"+config.port+"/blackhole/Update/" + config.store + "/";
