@@ -35,9 +35,9 @@
 
         <script>
 angular.module('sparqlapp', ['ui.bootstrap', 'ngSanitize', 'rdf']);
-angular.module('sparqlapp').controller('sparqlappC', function ($scope, $http, $timeout, sparql$http, sparql, brightstardb) {
-  //brightstardb.config.server = "bs.somedomain.com";
-  brightstardb.config.store = "Article";
+angular.module('sparqlapp').controller('sparqlappC', function ($scope, $http, $timeout, sparql$http, sparql, blackhole) {
+  //blackhole.config.server = "bs.somedomain.com";
+  blackhole.config.store = "Article";
   var idPrefix = sparql.prefix("o", "http://www.brightstardb.com/example/article/");
   var propertyPrefix = sparql.prefix("", "http://www.brightstardb.com/example/article#", ["title", "abstr", "tags"])
   var a = sparql.a;
@@ -93,8 +93,8 @@ angular.module('sparqlapp').controller('sparqlappC', function ($scope, $http, $t
           $scope.T = null;
           stderr(reason); },
         function(status) {
-          if (status === 404) alert("Error 404: The b* services were not found. Probably this is your first time accessing this app.\nTry setting up a b* store named " + brightstardb.config.store + "\nThere is a link for UI access.");
-          if (status === 0) alert("Error 0: Most likely the local 'BrightstarDB Service' is not running. Try starting it and hit F5 afterwards.");
+          if (status === 404) alert("Error 404: The b* services were not found. Probably this is your first time accessing this app.\nTry setting up a b* store named " + blackhole.config.store + "\nThere is a link for UI access.");
+          if (status === 0) alert("Error 0: Most likely the local 'Blackhole Service' is not running. Try starting it and hit F5 afterwards.");
         })
   }
 
@@ -260,12 +260,12 @@ angular.module('sparqlapp').filter("markdown", function($sce, $sanitize) {
           <a href="http://getbootstrap.com/">Bootstrap</a>,
           <a href="http://angular-ui.github.io/bootstrap/">UI Bootstrap</a>
           and <a href="https://github.com/chjj/marked">marked</a> for markdown parsing.
-          And, of course, <a href="http://www.brightstardb.com">Brightstar DB</a> (b*)
+          And, of course, <a href="https://github.com/Lercher/blackhole">Blackhole</a>
           for <a href="http://en.wikipedia.org/wiki/Resource_Description_Framework">RDF</a>
           and <a href="http://en.wikipedia.org/wiki/SPARQL">SPARQL</a>
           (<a href="http://www.w3.org/TR/sparql11-overview/">v1.1 language spec</a>)
           services. This app is available at <a href="https://github.com/Lercher/SparqlJsBinding/">GitHub</a>.
-          Access to your <a href="http://localhost:8090/brightstar">local b* UI</a>.
+          Access to your <a href="http://localhost:8090/blackhole">local Blackhole UI</a>.
           Show SPARQL transcript below <input type="checkbox" ng-model="showtranscript" /> .
         </footer>
 

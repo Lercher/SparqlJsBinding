@@ -2,7 +2,7 @@
 
 An [AngularJS](http://www.angularjs.org/) module to formulate SPARQL 1.1 queries 
 in a more JavaScript'ish way. It's currently integrated with the RESTful 
-Webservice of [BrightstarDB](http://www.brightstardb.com/). Has functions to store and retreive simple 
+Webservice of [Blackhole](https://github.com/Lercher/blackhole). Has functions to store and retreive simple 
 JavaScript objects in the RDF database.
 
 *Note:* The language binding is in no ways complete. It covers only
@@ -29,7 +29,7 @@ consider using JSON.stringify.
 
 My work, i.e. the language binding and the sample app are provided under the MIT license. 
 They are free to use for both commercial and non-commercial purposes. The Markdown parser 
-and the BrightstarDB Server have their own licensing. At the time of creation of this repository, 
+and the Blackhole Server have their own licensing. At the time of creation of this repository, 
 i.e. mid 2015 they were both open source.
 
 
@@ -49,12 +49,12 @@ This is a sample HTML5 application that uses the library.
 * add some metadata like abstract and title
 * tag them
 * markdown as body language
-* save them in a BrightstarDB RDF store
+* save them in a Blackhole RDF store
 * list and filter them by tags or metadata content
 
 To run the application locally you need to do some things first:
 
-1. Download and install BrightstarDB version at least 1.11 
+1. Download and install Blackhole. N.B. Blackhole needs a local MS SQL Server.
 
 2. Create a store named "Article"
 
@@ -75,11 +75,12 @@ markdown source code to proper html.
 
 ## Angular services
 
-A brief description of the three provided Angular services:
+A brief description of the four provided Angular services:
 
 * sparql
 * sparql$http
 * brightstardb
+* blackhole
 
 ### sparql
 
@@ -98,6 +99,10 @@ Create promises to
 A configuration point to build URLs to access BrightstarDB's
 Query and Update endpoints for a particular store.
 
+### blackhole
+
+A configuration point to build URLs to access Blackhole's
+Query and Update endpoints for a particular store.
 
 
 ## Sample Code Fragments
@@ -110,6 +115,13 @@ Code fragments showing the use of the library
 ```javascript
 brightstardb.config.server = "bs.somedomain.com";
 brightstardb.config.store = "Article";
+```
+
+### Setting up the Blackhole Server and Store
+
+```javascript
+blackhole.config.server = "bs.somedomain.com";
+blackhole.config.store = "Article";
 ```
 
 ### Defining some prefixes

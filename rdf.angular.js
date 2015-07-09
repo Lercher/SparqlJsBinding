@@ -11,7 +11,7 @@
 
 angular.module("rdf", [])
 
-.factory("sparql$http", ["$q", "$http", "brightstardb", function($q, $http, brightstardb) {
+.factory("sparql$http", ["$q", "$http", "blackhole", function($q, $http, brightstardb) {
 
     // sparql$http( aRetrieve | anUpdate | aQuery )
     // aRetrieve | anUpdate | aQuery - standard objects created by the sparql service
@@ -442,6 +442,25 @@ angular.module("rdf", [])
     };
     r.update = function() {
         return config.protocol+"://"+config.server+":"+config.port+"/brightstar/" + config.store + "/update";
+    }
+    r.config = config;
+    return r;
+}])
+
+.factory("blackhole", [function() {
+    var config = {
+        protocol: "http",
+        server: "localhost",
+        port: 8090,
+        resultAs: "json",
+        store: "Default"
+    }
+    var r = function()
+    {
+        return config.protocol+"://"+config.server+":"+config.port+"/blackhole/Query/" + config.store +config.resultAs + "/";
+    };
+    r.update = function() {
+        return config.protocol+"://"+config.server+":"+config.port+"/blackhole/Update/" + config.store + "/";
     }
     r.config = config;
     return r;
